@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Random Word Generator</title>
+<style>
+  :root { color-scheme: light; --ink:#172033; --muted:#5d687c; --line:#dce2eb; --paper:#f5f7fb; --accent:#2857c5; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
+  main { width:min(1050px, calc(100% - 32px)); margin:32px auto; }
+  header, section { background:#fff; border:1px solid var(--line); border-radius:16px; padding:22px; margin-bottom:18px; }
+  h1 { margin:0 0 8px; font-size:clamp(1.45rem,3vw,2rem); }
+  h2 { margin:0 0 12px; font-size:1.15rem; }
+  p { margin:7px 0; color:var(--muted); }
+  .actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
+  button { border:0; border-radius:10px; padding:11px 16px; font:600  .95rem system-ui; cursor:pointer; }
+  button.primary { background:var(--accent); color:white; }
+  button.secondary { background:#eaf0ff; color:#173b91; }
+  button:focus-visible { outline:3px solid #91adff; outline-offset:2px; }
+  .meta { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .pill { background:#eef2f8; color:#3c4960; border-radius:999px; padding:5px 10px; font-size:.85rem; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(145px,1fr)); gap:8px; }
+  .word { border:1px solid var(--line); background:#fbfcfe; border-radius:9px; padding:8px 10px; font-weight:600; letter-spacing:.02em; }
+  .selected { counter-increment: item; display:flex; align-items:center; gap:10px; border:1px solid #d6e0fa; background:#f5f8ff; border-radius:9px; padding:8px 10px; }
+  .number { display:inline-grid; place-items:center; width:26px; height:26px; border-radius:50%; background:#dfe8ff; color:#173b91; font-size:.82rem; }
+  .empty { border:1px dashed var(--line); border-radius:10px; padding:18px; color:var(--muted); }
+  .note { border-left:4px solid #d69b2d; padding:10px 13px; background:#fff9eb; border-radius:7px; color:#59451f; }
+  .small { font-size:.88rem; }
+  @media (max-width:560px) { main { width:min(100% - 20px, 1050px); margin:12px auto; } header,section { padding:16px; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Random Word Generator</h1>
+    <p>Generate 30 Random Words from the list of 60 words.</p>
+    <div class="meta">
+      <span class="pill">60 candidate words</span>
+      <span class="pill">30 selected per draw</span>
+      <span class="pill">No duplicates</span>
+    </div>
+    <div class="actions">
+      <button class="primary" id="generate">Generate 30 Random Words</button>
+      <button class="secondary" id="copy" disabled>Copy selected words</button>
+      <button class="secondary" id="csv" disabled>Download selection (CSV)</button>
+    </div>
+  </header>
+
+  <section>
+    <h2>Randomly selected 30 words</h2>
+    <p id="status" aria-live="polite">Select “Generate 30 Random Words” to make a new draw.</p>
+    <div id="results" class="empty">Your selected words will appear here in draw order.</div>
+  </section>
+
+  <section>
+    <h2>All 60 candidate words</h2>
+    <p>60 words</p>
+    <div id="candidates" class="grid"></div>
+  </section>
+
+</main>
+<script>
+const candidates = [
+"SAFE","VILLAGE","SUCCESS","VANDAL","YELLOW","ALLEY","EDUCATION","WEAPON","HAPPY","GRIEF",
+"BEAUTIFUL","HOME","WEDDING","ALCOHOL","AIDS","HAY","SICK","SLEEP","DREADFUL","FANTASTIC",
+"DECEIT","DEAD","HOSPITAL","SNUGGLE","PERFUME","ANGER","LIE","HURT","INSANITY","CRISIS",
+"MURDER","WASTE","HEALTHY","INFATUATION","DISASTER","KERCHIEF","PITY","SUBDUED","CHAIR","SAD",
+"FAILURE","KING","SHIRT","LOVE","FOOT","TWILIGHT","GLOOM","NICE","ANGUISHED","CAKE",
+"GIRL","CHOCOLATE","EXCITEMENT","BOOK","HARDSHIP","NATURE","DANGER","DEPRESSION","CITY","NOOSE"
+];
+
+let latest = [];
+
+function renderWords(target, words, numbered=false) {
+  const el = document.getElementById(target);
+  el.className = "grid";
+  el.replaceChildren();
+  words.forEach((word, i) => {
+    const item = document.createElement("div");
+    if (numbered) {
+      item.className = "selected";
+      const n = document.createElement("span");
+      n.className = "number";
+      n.textContent = String(i + 1);
+      const label = document.createElement("span");
+      label.textContent = word;
+      item.append(n, label);
+    } else {
+      item.className = "word";
+      item.textContent = word;
+    }
+    el.appendChild(item);
+  });
+}
+function secureRandomIndex(max) {
+  if (!window.crypto || !crypto.getRandomValues) return Math.floor(Math.random() * max);
+  const range = 0x100000000;
+  const limit = range - (range % max);
+  const buffer = new Uint32Array(1);
+  let value;
+  do { crypto.getRandomValues(buffer); value = buffer[0]; } while (value >= limit);
+  return value % max;
+}
+function generate() {
+  const pool = [...candidates];
+  latest = [];
+  for (let i = 0; i < 30; i++) {
+    const index = secureRandomIndex(pool.length);
+    latest.push(pool.splice(index, 1)[0]);
+  }
+  renderWords("results", latest, true);
+  document.getElementById("status").textContent = "Generated 30 unique words. The list below is in random draw order.";
+  document.getElementById("copy").disabled = false;
+  document.getElementById("csv").disabled = false;
+}
+document.getElementById("generate").addEventListener("click", generate);
+document.getElementById("copy").addEventListener("click", async () => {
+  if (!latest.length) return;
+  const text = latest.join("\n");
+  try {
+    await navigator.clipboard.writeText(text);
+    document.getElementById("status").textContent = "Selected words copied to clipboard.";
+  } catch {
+    document.getElementById("status").textContent = "Clipboard access was blocked by the browser. You can select and copy the displayed list.";
+  }
+});
+document.getElementById("csv").addEventListener("click", () => {
+  if (!latest.length) return;
+  const csv = "Draw order,Cue word\n" + latest.map((w,i) => `${i+1},${w}`).join("\n");
+  const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "random_30_cue_words.csv"; a.click();
+  URL.revokeObjectURL(url);
+});
+renderWords("candidates", candidates);
+</script>
+</body>
+</html>
