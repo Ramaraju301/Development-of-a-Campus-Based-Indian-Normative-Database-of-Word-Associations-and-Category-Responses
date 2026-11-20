@@ -1,9 +1,9 @@
 # Development-of-a-Campus-Based-Indian-Normative-Database-of-Word-Associations-and-Category-Responses
 This project proposes the development of a campus-based Indian normative database.
 
-## 100 responses order in excel file
+## 1) 100 responses order in excel file
 
-## Random Word Generator
+## 2) Random Word Generator
 
 A web-based tool for randomly selecting 30 words from a predefined list of 60 candidate words.
 
